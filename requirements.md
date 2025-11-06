@@ -3,12 +3,13 @@
 ### 프로젝트 세팅
 
 -   [x] README.md 작성
--   [ ] 프로젝트 구조 설계
--   [ ] 상수 정의 (constants.js)
+-   [x] 상수 정의 (constants.js)
 
 ### 기본 구조
 
--   [ ] Packet 클래스 구현
+-   [x] Packet 클래스 구현
+-   [ ] Timeline 기반 패킷 상태를 출력 전에 결정
+-   [ ] Timeline에 들어갈 각 Event 클래스 구현
 -   [ ] 입력 처리 (InputView, InputParser)
 -   [ ] 출력 처리 (OutputView, OutputFormatter)
 
