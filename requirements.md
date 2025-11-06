@@ -9,7 +9,8 @@
 
 -   [x] Packet 클래스 구현
 -   [ ] Timeline 기반 패킷 상태를 출력 전에 결정
--   [x] Timeline에 들어갈 각 Event 클래스 구현
+    -   [x] Timeline에 들어갈 각 Event 클래스 구현
+    -   [x] packet loss 결정 클래스 구현(Timeline에서 loss 판정 결과에 따른 분기 처리)
 -   [ ] 입력 처리 (InputView, InputParser)
 -   [ ] 출력 처리 (OutputView, OutputFormatter)
 

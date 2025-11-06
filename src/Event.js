@@ -5,3 +5,5 @@ class Event {
         this.data = data;
     }
 }
+
+export default Event;
