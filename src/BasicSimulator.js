@@ -74,7 +74,7 @@ class BasicSimulator {
         this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_ARRIVE, { packet }));
         this.timeline.addEvent(
             new Event(this.currentTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
-                ack: packet.seqEnd + 1,
+                ack: packet.endSeq + 1,
             })
         );
     }
@@ -86,9 +86,29 @@ class BasicSimulator {
         this.currentTime += this.rtt / 2;
         this.timeline.addEvent(
             new Event(this.currentTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
-                ack: packet.seqEnd + 1,
+                ack: packet.endSeq + 1,
             })
         );
+    }
+
+    #fourWayHandshake() {
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.FIN_SEND));
+        this.currentTime += this.rtt / 2;
+
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.FIN_ARRIVE));
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.FIN_ACK_SEND));
+        this.currentTime += this.rtt / 2;
+
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.FIN_ACK_ARRIVE));
+
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.FIN_SEND));
+        this.currentTime += this.rtt / 2;
+
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.FIN_ARRIVE));
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.FIN_ACK_SEND));
+        this.currentTime += this.rtt / 2;
+
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.FIN_ACK_ARRIVE));
     }
 
     planSimulation() {
@@ -96,7 +116,7 @@ class BasicSimulator {
 
         this.#threeWayHandshake();
         this.#sendFragmentedPackets();
-        // TODO 연결 종료 추가
+        this.#fourWayHandshake();
 
         this.timeline.sort();
     }

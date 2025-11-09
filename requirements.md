@@ -21,7 +21,7 @@
 -   [x] MSS 기반 fragmentation
 -   [x] Packet loss 시뮬레이션
 -   [x] Timeout 재전송
--   [ ] 4-way handshake 연결 종료 구현
+-   [x] 4-way handshake 연결 종료 구현
 -   [ ] BASIC 모드 통합 테스트
 
 ### FLOW_CONTROL 모드
