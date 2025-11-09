@@ -8,7 +8,7 @@
 ### 기본 구조
 
 -   [x] Packet 클래스 구현
--   [ ] Timeline 기반 패킷 상태를 출력 전에 결정
+-   [x] Timeline 기반 패킷 상태를 출력 전에 결정
     -   [x] Timeline에 들어갈 각 Event 클래스 구현
     -   [x] packet loss 결정 클래스 구현(Timeline에서 loss 판정 결과에 따른 분기 처리)
 -   [ ] 입력 처리 (InputView, InputParser)
@@ -18,7 +18,7 @@
 
 -   [x] 3-way handshake 연결 구현
 -   [ ] Sequence/ACK number 관리
--   [ ] MSS 기반 fragmentation
+-   [x] MSS 기반 fragmentation
 -   [ ] Packet loss 시뮬레이션
 -   [ ] Timeout 재전송
 -   [ ] 4-way handshake 연결 종료 구현
