@@ -7,7 +7,7 @@ class Packet {
     }
 
     getPacketInfo() {
-        return `Packet#${this.id} (seq#${this.startSeq} - ${this.endSeq}, ${this.packetSize})`;
+        return `Packet#${this.id} (seq#${this.startSeq} - ${this.endSeq}) packet size: ${this.packetSize}`;
     }
 }
 

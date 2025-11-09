@@ -17,7 +17,7 @@
 ### BASIC 모드
 
 -   [x] 3-way handshake 연결 구현
--   [ ] Sequence/ACK number 관리
+-   [x] Sequence/ACK number 관리
 -   [x] MSS 기반 fragmentation
 -   [x] Packet loss 시뮬레이션
 -   [x] Timeout 재전송

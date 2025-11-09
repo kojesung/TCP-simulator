@@ -148,8 +148,64 @@ class BasicSimulator {
     }
 
     async #executeEvent(event) {
-        // TODO: 이벤트별 출력
-        console.log(`[${event.time}ms] ${event.type}`);
+        // TODO 추후에 출력 포매터로 분리
+        switch (event.type) {
+            case EVENT_TYPE.SYN_SEND:
+                console.log('\n[3-way handshake 연결 시작]');
+                console.log(`[${event.time}ms] SYN → (seq=${event.data.seq})`);
+                break;
+
+            case EVENT_TYPE.SYN_ACK_ARRIVE:
+                console.log(`[${event.time}ms] ← SYN-ACK (ack=${event.data.ack})`);
+                break;
+
+            case EVENT_TYPE.ACK_SEND:
+                console.log(`[${event.time}ms] ACK →`);
+                console.log('3-way handshake 연결 완료!\n');
+                console.log('⚡️⚡️⚡️데이터 전송⚡️⚡️⚡️');
+                console.log(
+                    `전송할 전체 데이터의 크기: ${this.totalDataSize} bytes (${this.packets.length} packets)\n`
+                );
+                break;
+
+            case EVENT_TYPE.PACKET_SEND:
+                console.log(`[${event.time}ms] Send: ${event.data.packet.getPacketInfo()}`);
+                break;
+
+            case EVENT_TYPE.DATA_ACK_ARRIVE:
+                console.log(`[${event.time}ms] ← ACK ${event.data.ack}\n`);
+                break;
+
+            case EVENT_TYPE.TIMEOUT:
+                console.log(
+                    `[${event.time}ms] ⏰ Timeout 발생!(RTT*2 시간동안 ACK가 오지 않았음): Packet#${event.data.packet.id}`
+                );
+                break;
+
+            case EVENT_TYPE.RETRANSMIT:
+                console.log(`[${event.time}ms] 🔄 Retransmit: ${event.data.packet.getPacketInfo()}`);
+                break;
+
+            case EVENT_TYPE.FIN_SEND:
+                const finEvents = this.timeline.getEvents().filter((e) => e.type === EVENT_TYPE.FIN_SEND);
+                if (event === finEvents[0]) {
+                    console.log('\n4-way handshake 연결 종료 시작');
+                }
+                console.log(`[${event.time}ms] FIN →`);
+                break;
+
+            case EVENT_TYPE.FIN_ARRIVE:
+                console.log(`[${event.time}ms] ← FIN`);
+                break;
+
+            case EVENT_TYPE.FIN_ACK_ARRIVE:
+                console.log(`[${event.time}ms] ← ACK`);
+                const finAckEvents = this.timeline.getEvents().filter((e) => e.type === EVENT_TYPE.FIN_ACK_ARRIVE);
+                if (event === finAckEvents[finAckEvents.length - 1]) {
+                    console.log('⛓️‍💥⛓️‍💥⛓️‍💥연결 종료⛓️‍💥⛓️‍💥⛓️‍💥!\n');
+                }
+                break;
+        }
     }
 }
 
