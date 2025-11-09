@@ -1,0 +1,8 @@
+{
+    "name": "tcp-simulator",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "start": "node src/App.js"
+    }
+}

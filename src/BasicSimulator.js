@@ -1,18 +1,23 @@
-import { EVENT_TYPE } from './constants.js';
+import { EVENT_TYPE, SPEED_MODE } from './constants.js';
 import Event from './Event.js';
 import PacketFragments from './PacketFragments.js';
 import RandomGenerator from './RandomGenerator.js';
 import Timeline from './Timeline.js';
 
 class BasicSimulator {
-    constructor(totalDataSize, lossRate, rtt) {
+    constructor(totalDataSize, lossRate, rtt, speed) {
         this.totalDataSize = totalDataSize;
         this.lossRate = lossRate;
+        this.speed = speed;
         this.rtt = rtt;
         this.timeline = new Timeline();
         this.packets = [];
         this.currentTime = 0;
-        this.isn = 0; // TODO 랜덤한 수의 Seq# 생성하는 private 함수 호출
+        this.isn = this.#generateISN();
+    }
+
+    #generateISN() {
+        return Math.floor(Math.random() * 9000) + 1000;
     }
 
     #threeWayHandshake() {
@@ -84,6 +89,47 @@ class BasicSimulator {
                 ack: packet.seqEnd + 1,
             })
         );
+    }
+
+    planSimulation() {
+        this.currentTime = 0;
+
+        this.#threeWayHandshake();
+        this.#sendFragmentedPackets();
+        // TODO 연결 종료 추가
+
+        this.timeline.sort();
+    }
+
+    async run() {
+        const events = this.timeline.getEvents();
+        let runTime = 0;
+
+        for (const event of events) {
+            await this.#wait(event.time - runTime);
+            runTime = event.time;
+
+            await this.#executeEvent(event);
+        }
+    }
+
+    async #wait(ms) {
+        let actualDelay;
+        if (this.speed === SPEED_MODE.INSTANT) {
+            return;
+        } else if (this.speed === SPEED_MODE.FAST) {
+            actualDelay = ms * 0.1;
+        } else if (this.speed === SPEED_MODE.SLOW) {
+            actualDelay = ms;
+        }
+        if (actualDelay > 0) {
+            await new Promise((resolve) => setTimeout(resolve, actualDelay));
+        }
+    }
+
+    async #executeEvent(event) {
+        // TODO: 이벤트별 출력
+        console.log(`[${event.time}ms] ${event.type}`);
     }
 }
 
