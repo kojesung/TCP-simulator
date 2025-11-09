@@ -19,8 +19,8 @@
 -   [x] 3-way handshake 연결 구현
 -   [ ] Sequence/ACK number 관리
 -   [x] MSS 기반 fragmentation
--   [ ] Packet loss 시뮬레이션
--   [ ] Timeout 재전송
+-   [x] Packet loss 시뮬레이션
+-   [x] Timeout 재전송
 -   [ ] 4-way handshake 연결 종료 구현
 -   [ ] BASIC 모드 통합 테스트
 

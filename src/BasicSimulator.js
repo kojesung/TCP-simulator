@@ -55,9 +55,35 @@ class BasicSimulator {
 
             const isLost = RandomGenerator.isPacketLost(this.lossRate);
 
-            if (isLost) return null; // TODO packet loss시 로직 추가
-            else if (!isLost) return null; // TODO packet 전송 성공시 로직 추가
+            if (isLost) return this.#planPacketLoss(packet);
+            else if (!isLost) return this.#planPacketSuccess(packet);
         });
+    }
+
+    #planPacketLoss(packet) {
+        this.currentTime += this.rtt * 2;
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.TIMEOUT, { packet }));
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.RETRANSMIT, { packet }));
+
+        this.currentTime += this.rtt / 2;
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_ARRIVE, { packet }));
+        this.timeline.addEvent(
+            new Event(this.currentTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
+                ack: packet.seqEnd + 1,
+            })
+        );
+    }
+
+    #planPacketSuccess(packet) {
+        this.currentTime += this.rtt / 2;
+        this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_ARRIVE, { packet }));
+
+        this.currentTime += this.rtt / 2;
+        this.timeline.addEvent(
+            new Event(this.currentTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
+                ack: packet.seqEnd + 1,
+            })
+        );
     }
 }
 
