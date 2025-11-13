@@ -27,6 +27,7 @@
 ### FLOW_CONTROL 모드
 
 -   [ ] Receiver window 관리
+-   [x] RWND가 부족할 때 1byte씩 보내는 Probe
 -   [ ] 처리 속도에 따른 rwnd 변화
 -   [ ] FLOW_CONTROL 모드 통합 테스트
 
