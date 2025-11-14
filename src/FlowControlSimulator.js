@@ -58,6 +58,99 @@ class FlowControlSimulator extends BaseSimulator {
             })
         );
     }
+
+    // rwnd만큼만 보내는 메서드
+    sendPacketsAsMuchAsRwnd(canSendPacketCount, sentCount) {
+        let decidedPackets = [];
+
+        // 한번에 보낼 수 있는 만큼의 패킷 운명 정하기
+        for (let i = 0; i < canSendPacketCount; i++) {
+            const packet = this.packets[startIndex + i];
+            const isLost = RandomGenerator.isPacketLost(this.lossRate);
+            decidedPackets.push({ packet, isLost });
+        }
+
+        // 운명 정해진 애들 실행
+        for (let i = 0; i < decidedPackets.length; i++) {
+            const { packet, isLost } = decidedPackets[i];
+
+            this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_SEND, { packet }));
+
+            if (isLost) {
+                this.#planPacketLossInWindow(decidedPackets, i, this.currentTime, packet);
+            } else if (!isLost) {
+                this.#planPacketSuccessInWindow();
+            }
+        }
+    }
+
+    #planPacketLossInWindow(windowPackets, indexInWindow, sentTime, packet) {
+        let duplicateCount = 0;
+        for (let i = indexInWindow + 1; i < windowPackets.length; i++) {
+            if (!windowPackets[i].isLost) duplicateCount++;
+        }
+
+        const baseAckTime = sentTime + this.rtt;
+
+        for (let i = 0; i < duplicateCount; i++) {
+            const ackTime = baseAckTime + i + 1;
+            this.timeline.addEvent(new Event(ackTime, EVENT_TYPE.DUPLICATE_ACK, { ack: packet.endSeq + 1 }));
+        }
+
+        if (duplicateCount >= 3) {
+            const fastRetransmitTime = baseAckTime + 3; // 3개의 duplicate ACK를 받은 시점
+            this.timeline.addEvent(
+                new Event(fastRetransmitTime, EVENT_TYPE.FAST_RETRANSMIT, {
+                    packet,
+                })
+            );
+
+            const retransmitArriveTime = fastRetransmitTime + this.rtt / 2;
+            this.timeline.addEvent(
+                new Event(retransmitArriveTime, EVENT_TYPE.PACKET_ARRIVE, {
+                    packet,
+                })
+            );
+
+            const retransmitAckTime = retransmitArriveTime + this.rtt / 2;
+            this.timeline.addEvent(
+                new Event(retransmitAckTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
+                    ack: packet.endSeq + 1,
+                })
+            );
+        } else {
+            // timeout 시작
+            const timeoutTime = sentTime + this.rtt * 2;
+
+            this.timeline.addEvent(
+                new Event(timeoutTime, EVENT_TYPE.TIMEOUT, {
+                    packet,
+                })
+            );
+
+            this.timeline.addEvent(
+                new Event(timeoutTime, EVENT_TYPE.RETRANSMIT, {
+                    packet,
+                })
+            );
+
+            const arriveTime = timeoutTime + this.rtt / 2;
+            this.timeline.addEvent(
+                new Event(arriveTime, EVENT_TYPE.PACKET_ARRIVE, {
+                    packet,
+                })
+            );
+
+            const ackTime = arriveTime + this.rtt / 2;
+            this.timeline.addEvent(
+                new Event(ackTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
+                    ack: packet.endSeq + 1,
+                })
+            );
+        }
+    }
+
+    #planPacketSuccessInWindow(packet, currentTime) {}
 }
 
 export default FlowControlSimulator;

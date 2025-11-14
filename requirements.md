@@ -28,6 +28,7 @@
 
 -   [ ] Receiver window 관리
 -   [x] RWND가 부족할 때 1byte씩 보내는 Probe
+-   [x] Fast Retransmit (3 dup ACKs)
 -   [ ] 처리 속도에 따른 rwnd 변화
 -   [ ] FLOW_CONTROL 모드 통합 테스트
 
@@ -35,7 +36,6 @@
 
 -   [ ] cwnd 관리 (Slow Start)
 -   [ ] Congestion Avoidance
--   [ ] Fast Retransmit (3 dup ACKs)
 -   [ ] Fast Recovery
 -   [ ] ssthresh 계산
 -   [ ] CONGESTION_CONTROL 모드 통합 테스트
