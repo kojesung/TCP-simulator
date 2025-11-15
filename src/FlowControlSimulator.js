@@ -1,7 +1,7 @@
 import BaseSimulator from './BaseSimulator.js';
 import { EVENT_TYPE, TCP } from './constants.js';
 import Event from './Event.js';
-import PacketFragments from './PacketFragments';
+import PacketFragments from './PacketFragments.js';
 import RandomGenerator from './RandomGenerator.js';
 
 class FlowControlSimulator extends BaseSimulator {
@@ -16,6 +16,7 @@ class FlowControlSimulator extends BaseSimulator {
         this.lastAck = this.isn + 1;
         this.duplicateAckCount = 0;
     }
+
     _sendPackets() {
         this.packets = PacketFragments.getFragmentedPackets(this.totalDataSize, this.isn + 1);
 
@@ -25,16 +26,19 @@ class FlowControlSimulator extends BaseSimulator {
             const canSendPacketCount = Math.floor(this.rwnd / TCP.MSS);
 
             if (canSendPacketCount === 0) {
-                this.sendProbePacket();
+                this.#sendProbePacket(sentCount);
                 continue;
             }
 
-            // TODO 보낼 수 있는 만큼 보내는 함수(canSendPacketCount, sentCount)
-            sentCount += 1;
+            const willSend = Math.min(canSendPacketCount, this.packets.length - sentCount);
+
+            this.sendPacketsAsMuchAsRwnd(willSend, sentCount);
+            sentCount += willSend;
         }
     }
-    sendProbePacket() {
-        const nextSeq = this.packets.length > 0 ? this.packets[this.packets.length - 1].endSeq + 1 : this.isn + 1;
+
+    #sendProbePacket(sentCount) {
+        const nextSeq = this.packets[sentCount].startSeq;
 
         this.timeline.addEvent(
             new Event(this.currentTime, EVENT_TYPE.RWND_PROBE, {
@@ -61,11 +65,12 @@ class FlowControlSimulator extends BaseSimulator {
 
     // rwnd만큼만 보내는 메서드
     sendPacketsAsMuchAsRwnd(canSendPacketCount, sentCount) {
+        const sendStartTime = this.currentTime;
         let decidedPackets = [];
 
         // 한번에 보낼 수 있는 만큼의 패킷 운명 정하기
         for (let i = 0; i < canSendPacketCount; i++) {
-            const packet = this.packets[startIndex + i];
+            const packet = this.packets[sentCount + i];
             const isLost = RandomGenerator.isPacketLost(this.lossRate);
             decidedPackets.push({ packet, isLost });
         }
@@ -73,15 +78,33 @@ class FlowControlSimulator extends BaseSimulator {
         // 운명 정해진 애들 실행
         for (let i = 0; i < decidedPackets.length; i++) {
             const { packet, isLost } = decidedPackets[i];
-
-            this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_SEND, { packet }));
+            this.timeline.addEvent(
+                new Event(this.currentTime, EVENT_TYPE.PACKET_SEND, {
+                    packet,
+                    rwnd: this.rwnd,
+                })
+            );
 
             if (isLost) {
                 this.#planPacketLossInWindow(decidedPackets, i, this.currentTime, packet);
             } else if (!isLost) {
-                this.#planPacketSuccessInWindow();
+                this.#planPacketSuccessInWindow(decidedPackets, i, this.currentTime, packet);
             }
+            this.currentTime += 1; // 한번에 보내는 패킷간 1ms 간격
         }
+
+        this.currentTime = sendStartTime + this.rtt * 2;
+
+        this.#updateRwnd(canSendPacketCount * TCP.MSS);
+    }
+
+    #updateRwnd(sentBytes) {
+        this.bufferedBytes += sentBytes;
+
+        const processed = Math.min(this.receiverSpeed, this.bufferedBytes);
+        this.bufferedBytes -= processed;
+
+        this.rwnd = this.initialBufferSize - this.bufferedBytes;
     }
 
     #planPacketLossInWindow(windowPackets, indexInWindow, sentTime, packet) {
@@ -90,15 +113,8 @@ class FlowControlSimulator extends BaseSimulator {
             if (!windowPackets[i].isLost) duplicateCount++;
         }
 
-        const baseAckTime = sentTime + this.rtt;
-
-        for (let i = 0; i < duplicateCount; i++) {
-            const ackTime = baseAckTime + i + 1;
-            this.timeline.addEvent(new Event(ackTime, EVENT_TYPE.DUPLICATE_ACK, { ack: packet.endSeq + 1 }));
-        }
-
         if (duplicateCount >= 3) {
-            const fastRetransmitTime = baseAckTime + 3; // 3개의 duplicate ACK를 받은 시점
+            const fastRetransmitTime = sentTime + this.rtt + 3;
             this.timeline.addEvent(
                 new Event(fastRetransmitTime, EVENT_TYPE.FAST_RETRANSMIT, {
                     packet,
@@ -119,7 +135,7 @@ class FlowControlSimulator extends BaseSimulator {
                 })
             );
         } else {
-            // timeout 시작
+            // timeout
             const timeoutTime = sentTime + this.rtt * 2;
 
             this.timeline.addEvent(
@@ -150,7 +166,44 @@ class FlowControlSimulator extends BaseSimulator {
         }
     }
 
-    #planPacketSuccessInWindow(packet, currentTime) {}
+    #planPacketSuccessInWindow(windowPackets, indexInWindow, sentTime, packet) {
+        let hasLossPacket = false;
+        for (let i = 0; i < indexInWindow; i++) {
+            if (windowPackets[i].isLost) {
+                hasLossPacket = true;
+                break;
+            }
+        }
+        const arriveTime = sentTime + this.rtt / 2;
+        this.timeline.addEvent(new Event(arriveTime, EVENT_TYPE.PACKET_ARRIVE, { packet }));
+
+        if (!hasLossPacket) {
+            const ackTime = sentTime + this.rtt;
+            this.timeline.addEvent(new Event(ackTime, EVENT_TYPE.DATA_ACK_ARRIVE, { ack: packet.endSeq + 1 }));
+        }
+    }
+
+    async _executeEvent(event) {
+        switch (event.type) {
+            case EVENT_TYPE.DUPLICATE_ACK:
+                console.log(`[${event.time}ms] ⚠️ Duplicate ACK 발생: ${event.data.ack}`);
+                return;
+
+            case EVENT_TYPE.FAST_RETRANSMIT:
+                console.log(
+                    `[${event.time}ms] 3 Duplicate ACK로 인한 Fast Retransmit: ${event.data.packet.getPacketInfo()}`
+                );
+                return;
+
+            case EVENT_TYPE.RWND_PROBE:
+                console.log(
+                    `[${event.time}ms] RWND 자리가 생겼는지 Probe 시작 (seq=${event.data.seq}, rwnd=${event.data.rwnd}B)`
+                );
+                return;
+        }
+
+        await super._executeEvent(event);
+    }
 }
 
 export default FlowControlSimulator;

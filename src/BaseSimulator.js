@@ -90,7 +90,7 @@ class BaseSimulator {
             await this.#wait(event.time - runTime);
             runTime = event.time;
 
-            await this.#executeEvent(event);
+            await this._executeEvent(event);
         }
     }
 
@@ -108,7 +108,7 @@ class BaseSimulator {
         }
     }
 
-    async #executeEvent(event) {
+    async _executeEvent(event) {
         // TODO 추후에 출력 포매터로 분리
         switch (event.type) {
             case EVENT_TYPE.SYN_SEND:
