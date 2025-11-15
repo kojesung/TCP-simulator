@@ -36,7 +36,6 @@ class FlowControlSimulator extends BaseSimulator {
             this.sendPacketsAsMuchAsRwnd(willSend, sentCount);
             sentCount += willSend;
         }
-        this.currentTime = this.maxAckTime;
     }
 
     #sendProbePacket(sentCount) {
@@ -100,10 +99,11 @@ class FlowControlSimulator extends BaseSimulator {
             if (isLost) {
                 this.#planPacketLossInWindow(decidedPackets, i, this.currentTime, packet);
                 this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_LOSS, packet));
-            } else if (!isLost) {
+            } else {
                 this.#planPacketSuccessInWindow(decidedPackets, i, this.currentTime, packet);
             }
-            this.currentTime += 1; // 한번에 보내는 패킷간 1ms 간격
+
+            this.currentTime += 1;
         }
 
         this.currentTime = sendStartTime + this.rtt * 2;
@@ -121,12 +121,9 @@ class FlowControlSimulator extends BaseSimulator {
     }
 
     #planPacketLossInWindow(windowPackets, indexInWindow, sentTime, packet) {
-        let duplicateCount = 0;
-        for (let i = indexInWindow + 1; i < windowPackets.length; i++) {
-            if (!windowPackets[i].isLost) duplicateCount++;
-        }
+        const lossType = this._detectLossType(windowPackets, indexInWindow);
 
-        if (duplicateCount >= 3) {
+        if (lossType === 'FAST_RETRANSMIT') {
             const fastRetransmitTime = sentTime + this.rtt + 3;
             this.timeline.addEvent(
                 new Event(fastRetransmitTime, EVENT_TYPE.FAST_RETRANSMIT, {
@@ -134,21 +131,9 @@ class FlowControlSimulator extends BaseSimulator {
                 })
             );
 
-            const retransmitArriveTime = fastRetransmitTime + this.rtt / 2;
-            this.timeline.addEvent(
-                new Event(retransmitArriveTime, EVENT_TYPE.PACKET_ARRIVE, {
-                    packet,
-                })
-            );
+            const ackTime = this._createRetransmitEvents(packet, fastRetransmitTime);
 
-            const retransmitAckTime = retransmitArriveTime + this.rtt / 2;
-            this.timeline.addEvent(
-                new Event(retransmitAckTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
-                    ack: packet.endSeq + 1,
-                })
-            );
-
-            this.maxAckTime = Math.max(this.maxAckTime, retransmitAckTime);
+            this.maxAckTime = Math.max(this.maxAckTime, ackTime);
         } else {
             // timeout
             const timeoutTime = sentTime + this.rtt * 2;
@@ -159,25 +144,7 @@ class FlowControlSimulator extends BaseSimulator {
                 })
             );
 
-            this.timeline.addEvent(
-                new Event(timeoutTime, EVENT_TYPE.RETRANSMIT, {
-                    packet,
-                })
-            );
-
-            const arriveTime = timeoutTime + this.rtt / 2;
-            this.timeline.addEvent(
-                new Event(arriveTime, EVENT_TYPE.PACKET_ARRIVE, {
-                    packet,
-                })
-            );
-
-            const ackTime = arriveTime + this.rtt / 2;
-            this.timeline.addEvent(
-                new Event(ackTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
-                    ack: packet.endSeq + 1,
-                })
-            );
+            const ackTime = this._createRetransmitEvents(packet, timeoutTime);
 
             this.maxAckTime = Math.max(this.maxAckTime, ackTime);
         }

@@ -54,6 +54,32 @@ class BaseSimulator {
         throw new Error('[ERROR] _sendPackets()는 자식 class에서 구현해야합니다.');
     }
 
+    _detectLossType(windowPackets, lostIndex) {
+        let duplicateCount = 0;
+
+        for (let i = lostIndex + 1; i < windowPackets.length; i++) {
+            if (!windowPackets[i].isLost) {
+                duplicateCount++;
+            }
+        }
+
+        return duplicateCount >= 3 ? 'FAST_RETRANSMIT' : 'TIMEOUT';
+    }
+
+    _createRetransmitEvents(packet, retransmitTime) {
+        this.timeline.addEvent(new Event(retransmitTime, EVENT_TYPE.RETRANSMIT, { packet }));
+
+        const arriveTime = retransmitTime + this.rtt / 2;
+        this.timeline.addEvent(new Event(arriveTime, EVENT_TYPE.PACKET_ARRIVE, { packet }));
+
+        const ackTime = arriveTime + this.rtt / 2;
+        this.timeline.addEvent(
+            new Event(ackTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
+                ack: packet.endSeq + 1,
+            })
+        );
+    }
+
     _fourWayHandshake() {
         this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.FIN_SEND));
         this.currentTime += this.rtt / 2;
