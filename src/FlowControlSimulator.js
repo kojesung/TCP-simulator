@@ -15,6 +15,7 @@ class FlowControlSimulator extends BaseSimulator {
 
         this.lastAck = this.isn + 1;
         this.duplicateAckCount = 0;
+        this.maxAckTime = 0;
     }
 
     _sendPackets() {
@@ -35,6 +36,7 @@ class FlowControlSimulator extends BaseSimulator {
             this.sendPacketsAsMuchAsRwnd(willSend, sentCount);
             sentCount += willSend;
         }
+        this.currentTime = this.maxAckTime;
     }
 
     #sendProbePacket(sentCount) {
@@ -134,6 +136,8 @@ class FlowControlSimulator extends BaseSimulator {
                     ack: packet.endSeq + 1,
                 })
             );
+
+            this.maxAckTime = Math.max(this.maxAckTime, retransmitAckTime);
         } else {
             // timeout
             const timeoutTime = sentTime + this.rtt * 2;
@@ -163,6 +167,8 @@ class FlowControlSimulator extends BaseSimulator {
                     ack: packet.endSeq + 1,
                 })
             );
+
+            this.maxAckTime = Math.max(this.maxAckTime, ackTime);
         }
     }
 
@@ -193,6 +199,7 @@ class FlowControlSimulator extends BaseSimulator {
                     ack: packet.endSeq + 1,
                 })
             );
+            this.maxAckTime = Math.max(this.maxAckTime, ackTime);
         }
     }
 
