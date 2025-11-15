@@ -78,12 +78,14 @@ class FlowControlSimulator extends BaseSimulator {
             })
         );
         let decidedPackets = [];
+        let hasLoss = false;
 
         // 한번에 보낼 수 있는 만큼의 패킷 운명 정하기
         for (let i = 0; i < canSendPacketCount; i++) {
             const packet = this.packets[sentCount + i];
             const isLost = RandomGenerator.isPacketLost(this.lossRate);
             decidedPackets.push({ packet, isLost });
+            if (isLost) hasLoss = true;
         }
 
         // 운명 정해진 애들 실행
@@ -106,7 +108,11 @@ class FlowControlSimulator extends BaseSimulator {
             this.currentTime += 1;
         }
 
-        this.currentTime = sendStartTime + this.rtt * 2;
+        if (hasLoss) {
+            this.currentTime = Math.max(sendStartTime + this.rtt * 2, this.maxAckTime);
+        } else {
+            this.currentTime = sendStartTime + this.rtt * 2;
+        }
 
         this.#updateRwnd(canSendPacketCount * TCP.MSS);
     }
