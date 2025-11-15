@@ -159,6 +159,10 @@ class BaseSimulator {
                 console.log(`[${event.time}ms] ← FIN`);
                 break;
 
+            case EVENT_TYPE.PACKET_LOSS:
+                console.log(`🚨🚨🚨Packet#${event.data.id} loss 발생🚨🚨🚨`);
+                break;
+
             case EVENT_TYPE.FIN_ACK_ARRIVE:
                 console.log(`[${event.time}ms] ← ACK`);
                 const finAckEvents = this.timeline.getEvents().filter((e) => e.type === EVENT_TYPE.FIN_ACK_ARRIVE);

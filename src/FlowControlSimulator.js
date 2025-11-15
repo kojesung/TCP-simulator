@@ -68,6 +68,16 @@ class FlowControlSimulator extends BaseSimulator {
     // rwnd만큼만 보내는 메서드
     sendPacketsAsMuchAsRwnd(canSendPacketCount, sentCount) {
         const sendStartTime = this.currentTime;
+
+        this.timeline.addEvent(
+            new Event(this.currentTime, EVENT_TYPE.WINDOW_SEND_START, {
+                windowSize: canSendPacketCount,
+                rwnd: this.rwnd,
+                rwndPackets: Math.floor(this.rwnd / TCP.MSS),
+                startPacketId: this.packets[sentCount].id,
+                endPacketId: this.packets[sentCount + canSendPacketCount - 1].id,
+            })
+        );
         let decidedPackets = [];
 
         // 한번에 보낼 수 있는 만큼의 패킷 운명 정하기
@@ -89,6 +99,7 @@ class FlowControlSimulator extends BaseSimulator {
 
             if (isLost) {
                 this.#planPacketLossInWindow(decidedPackets, i, this.currentTime, packet);
+                this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_LOSS, packet));
             } else if (!isLost) {
                 this.#planPacketSuccessInWindow(decidedPackets, i, this.currentTime, packet);
             }
@@ -205,6 +216,13 @@ class FlowControlSimulator extends BaseSimulator {
 
     async _executeEvent(event) {
         switch (event.type) {
+            case EVENT_TYPE.WINDOW_SEND_START:
+                console.log(
+                    `\n[${event.time}ms] 📦 Window 전송 시작\n` +
+                        `          rwnd: ${event.data.rwnd}B (${event.data.rwndPackets} packets)\n` +
+                        `          전송 가능: ${event.data.windowSize} packets (Packet#${event.data.startPacketId} ~ #${event.data.endPacketId})`
+                );
+                return;
             case EVENT_TYPE.DUPLICATE_ACK:
                 console.log(`[${event.time}ms] ⚠️ Duplicate ACK 발생: ${event.data.ack}`);
                 return;
