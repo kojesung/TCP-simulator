@@ -167,19 +167,32 @@ class FlowControlSimulator extends BaseSimulator {
     }
 
     #planPacketSuccessInWindow(windowPackets, indexInWindow, sentTime, packet) {
-        let hasLossPacket = false;
+        // 현재 윈도우에서 가장 먼저 손실된 패킷 찾기
+        let firstLostPacket = null;
         for (let i = 0; i < indexInWindow; i++) {
             if (windowPackets[i].isLost) {
-                hasLossPacket = true;
+                firstLostPacket = windowPackets[i].packet;
                 break;
             }
         }
+
         const arriveTime = sentTime + this.rtt / 2;
         this.timeline.addEvent(new Event(arriveTime, EVENT_TYPE.PACKET_ARRIVE, { packet }));
 
-        if (!hasLossPacket) {
-            const ackTime = sentTime + this.rtt;
-            this.timeline.addEvent(new Event(ackTime, EVENT_TYPE.DATA_ACK_ARRIVE, { ack: packet.endSeq + 1 }));
+        const ackTime = arriveTime + this.rtt / 2;
+
+        if (firstLostPacket) {
+            this.timeline.addEvent(
+                new Event(ackTime, EVENT_TYPE.DUPLICATE_ACK, {
+                    ack: firstLostPacket.startSeq,
+                })
+            );
+        } else {
+            this.timeline.addEvent(
+                new Event(ackTime, EVENT_TYPE.DATA_ACK_ARRIVE, {
+                    ack: packet.endSeq + 1,
+                })
+            );
         }
     }
 
