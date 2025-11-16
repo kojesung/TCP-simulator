@@ -23,6 +23,11 @@ export const SPEED_RATIO = {
     SLOW: 1.0,
 };
 
+export const CONGESTION_CONTROL = {
+    SLOW_START: 'SLOW_START',
+    FAST_RECOVERY: 'FAST_RECOVERY',
+};
+
 export const EVENT_TYPE = {
     // 3-way handshake connection
     SYN_SEND: 'SYN_SEND',
