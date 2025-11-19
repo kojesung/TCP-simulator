@@ -1,3 +1,4 @@
+import { Console } from '@woowacourse/mission-utils';
 import BaseOutputFormatter from './BaseOutputFormatter.js';
 import { EVENT_TYPE, SPEED_MODE } from './constants.js';
 import Event from './Event.js';
@@ -142,7 +143,7 @@ class BaseSimulator {
 
         const output = this.formatter.format(event);
         if (output) {
-            console.log(output);
+            Console.print(output);
         }
     }
 }
