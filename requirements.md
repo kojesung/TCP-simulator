@@ -11,8 +11,8 @@
 -   [x] Timeline 기반 패킷 상태를 출력 전에 결정
     -   [x] Timeline에 들어갈 각 Event 클래스 구현
     -   [x] packet loss 결정 클래스 구현(Timeline에서 loss 판정 결과에 따른 분기 처리)
--   [ ] 입력 처리 (InputView, InputParser)
--   [ ] 출력 처리 (OutputView, OutputFormatter)
+-   [x] 입력 처리 (InputView, InputParser)
+-   [x] 출력 처리 (OutputView, OutputFormatter)
 
 ### BASIC 모드
 
@@ -42,9 +42,9 @@
 
 ### 시뮬레이션 속도
 
--   [ ] INSTANT 모드 (기본)
--   [ ] FAST 모드 (10:1)
--   [ ] SLOW 모드 (1:1)
+-   [x] INSTANT 모드 (기본)
+-   [x] FAST 모드 (10:1)
+-   [x] SLOW 모드 (1:1)
 
 ---
 

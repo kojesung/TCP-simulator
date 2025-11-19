@@ -1,12 +1,15 @@
 import BaseSimulator from './BaseSimulator.js';
 import { EVENT_TYPE, TCP } from './constants.js';
 import Event from './Event.js';
+import FlowControlOutputFormatter from './FlowControlOutputFormatter.js';
 import PacketFragments from './PacketFragments.js';
 import RandomGenerator from './RandomGenerator.js';
 
 class FlowControlSimulator extends BaseSimulator {
     constructor(totalDataSize, lossRate, rtt, speed, receiverBufferSize, receiverSpeed) {
         super(totalDataSize, lossRate, rtt, speed);
+
+        this.formatter = new FlowControlOutputFormatter(this);
 
         this.initialBufferSize = receiverBufferSize;
         this.rwnd = receiverBufferSize;
@@ -185,26 +188,6 @@ class FlowControlSimulator extends BaseSimulator {
             );
             this.maxAckTime = Math.max(this.maxAckTime, ackTime);
         }
-    }
-
-    async _executeEvent(event) {
-        switch (event.type) {
-            case EVENT_TYPE.WINDOW_SEND_START:
-                console.log(
-                    `\n[${event.time}ms] 📦 Window 전송 시작\n` +
-                        `          rwnd: ${event.data.rwnd}B (${event.data.rwndPackets} packets)\n` +
-                        `          전송 가능: ${event.data.windowSize} packets (Packet#${event.data.startPacketId} ~ #${event.data.endPacketId})`
-                );
-                return;
-
-            case EVENT_TYPE.RWND_PROBE:
-                console.log(
-                    `[${event.time}ms] RWND 자리가 생겼는지 Probe 시작 (seq=${event.data.seq}, rwnd=${event.data.rwnd}B)`
-                );
-                return;
-        }
-
-        await super._executeEvent(event);
     }
 }
 

@@ -1,4 +1,5 @@
 import BaseSimulator from './BaseSimulator.js';
+import CongestionControlOutputFormatter from './CongestionControlOutputFormatter.js';
 import { CONGESTION_CONTROL, EVENT_TYPE, TCP } from './constants.js';
 import Event from './Event.js';
 import PacketFragments from './PacketFragments.js';
@@ -7,6 +8,8 @@ import RandomGenerator from './RandomGenerator.js';
 class CongestionControlSimulator extends BaseSimulator {
     constructor(totalDataSize, lossRate, rtt, speed, initialCwnd = 1) {
         super(totalDataSize, lossRate, rtt, speed);
+
+        this.formatter = new CongestionControlOutputFormatter(this);
 
         this.cwnd = initialCwnd * TCP.MSS;
         this.ssthresh = Infinity;
@@ -210,56 +213,6 @@ class CongestionControlSimulator extends BaseSimulator {
                 })
             );
         }
-    }
-
-    async _executeEvent(event) {
-        switch (event.type) {
-            case EVENT_TYPE.WINDOW_SEND_START:
-                console.log(
-                    `\n[${event.time}ms] 📦 Window 전송 시작 [${event.data.state}]\n` +
-                        `          cwnd: ${event.data.cwnd}B (${event.data.cwndPackets} packets)\n` +
-                        `          ssthresh: ${event.data.ssthresh === Infinity ? '∞' : event.data.ssthresh + 'B'} (${
-                            event.data.ssthreshPackets
-                        } packets)\n` +
-                        `          → Packet#${event.data.startPacketId} ~ #${event.data.endPacketId} (${event.data.windowSize} packets)`
-                );
-                return;
-
-            case EVENT_TYPE.CWND_UPDATE:
-                console.log(
-                    `[${event.time}ms] cwnd: ${event.data.oldCwnd}B → ${event.data.newCwnd}B (${event.data.cwndPackets} packets) [${event.data.state}]`
-                );
-                return;
-
-            case EVENT_TYPE.STATE_CHANGE:
-                console.log(
-                    `[${event.time}ms] 상태 전환: ${event.data.from} → ${event.data.to}\n` +
-                        `          cwnd: ${event.data.cwnd}B, ssthresh: ${event.data.ssthresh}B`
-                );
-                return;
-
-            case EVENT_TYPE.FAST_RECOVERY:
-                console.log(
-                    `[${event.time}ms] ❤️‍🩹❤️‍🩹❤️‍🩹 Fast Recovery 진입 (3 Duplicate ACKs) ❤️‍🩹❤️‍🩹❤️‍🩹\n` +
-                        `          ssthresh: ${
-                            event.data.oldSsthresh === Infinity ? '∞' : event.data.oldSsthresh + 'B'
-                        } → ${event.data.newSsthresh}B\n` +
-                        `          cwnd: ${event.data.oldCwnd}B → ${event.data.newCwnd}B`
-                );
-                return;
-
-            case EVENT_TYPE.TIMEOUT_CONGESTION:
-                console.log(
-                    `[${event.time}ms] ⏰⏰⏰ Timeout으로 인한 혼잡 감지 ⏰⏰⏰\n` +
-                        `          ssthresh: ${
-                            event.data.oldSsthresh === Infinity ? '∞' : event.data.oldSsthresh + 'B'
-                        } → ${event.data.newSsthresh}B\n` +
-                        `          cwnd: ${event.data.oldCwnd}B → ${event.data.newCwnd}B (Slow Start 재시작)`
-                );
-                return;
-        }
-
-        await super._executeEvent(event);
     }
 }
 
