@@ -196,15 +196,6 @@ class FlowControlSimulator extends BaseSimulator {
                         `          전송 가능: ${event.data.windowSize} packets (Packet#${event.data.startPacketId} ~ #${event.data.endPacketId})`
                 );
                 return;
-            case EVENT_TYPE.DUPLICATE_ACK:
-                console.log(`[${event.time}ms] ⚠️ Duplicate ACK 발생: ${event.data.ack}`);
-                return;
-
-            case EVENT_TYPE.FAST_RETRANSMIT:
-                console.log(
-                    `[${event.time}ms] 3 Duplicate ACK로 인한 Fast Retransmit: ${event.data.packet.getPacketInfo()}`
-                );
-                return;
 
             case EVENT_TYPE.RWND_PROBE:
                 console.log(

@@ -197,6 +197,16 @@ class BaseSimulator {
                     console.log('⛓️‍💥⛓️‍💥⛓️‍💥연결 종료⛓️‍💥⛓️‍💥⛓️‍💥!\n');
                 }
                 break;
+
+            case EVENT_TYPE.DUPLICATE_ACK:
+                console.log(`[${event.time}ms] ⚠️  Duplicate ACK: ${event.data.ack}`);
+                break;
+
+            case EVENT_TYPE.FAST_RETRANSMIT:
+                console.log(
+                    `[${event.time}ms] 3 Duplicate ACK로 인한 Fast Retransmit: ${event.data.packet.getPacketInfo()}`
+                );
+                break;
         }
     }
 }

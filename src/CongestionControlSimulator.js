@@ -35,11 +35,29 @@ class CongestionControlSimulator extends BaseSimulator {
     }
 
     #sendPacketAsMuchAsCwnd(sendCount, startIndex) {
+        const sendStartTime = this.currentTime;
+
+        this.timeline.addEvent(
+            new Event(this.currentTime, EVENT_TYPE.WINDOW_SEND_START, {
+                windowSize: sendCount,
+                cwnd: this.cwnd,
+                cwndPackets: Math.floor(this.cwnd / TCP.MSS),
+                ssthresh: this.ssthresh,
+                ssthreshPackets: this.ssthresh === Infinity ? '∞' : Math.floor(this.ssthresh / TCP.MSS),
+                state: this.state,
+                startPacketId: this.packets[startIndex].id,
+                endPacketId: this.packets[startIndex + sendCount - 1].id,
+            })
+        );
+
         let decidedPackets = [];
+        let hasLoss = false;
+
         for (let i = 0; i < sendCount; i++) {
             const packet = this.packets[startIndex + i];
             const isLost = RandomGenerator.isPacketLost(this.lossRate);
             decidedPackets.push({ packet, isLost });
+            if (isLost) hasLoss = true;
         }
 
         for (let i = 0; i < decidedPackets.length; i++) {
@@ -58,10 +76,16 @@ class CongestionControlSimulator extends BaseSimulator {
                 this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_LOSS, packet));
             } else {
                 this.#planPacketSuccess(decidedPackets, i, this.currentTime, packet);
-                this.#updateCwndOnSuccess(sendCount);
             }
 
             this.currentTime += 1;
+        }
+
+        if (hasLoss) {
+            this.currentTime = this.maxAckTime;
+        } else {
+            this.currentTime = sendStartTime + this.rtt * 2;
+            this.#updateCwndOnSuccess(sendCount);
         }
     }
 
@@ -98,8 +122,8 @@ class CongestionControlSimulator extends BaseSimulator {
             this.cwnd = this.ssthresh;
             this.timeline.addEvent(
                 new Event(ackTime, EVENT_TYPE.STATE_CHANGE, {
-                    from: CONGESTION_STATE.FAST_RECOVERY,
-                    to: CONGESTION_STATE.CONGESTION_AVOIDANCE,
+                    from: CONGESTION_CONTROL.FAST_RECOVERY,
+                    to: CONGESTION_CONTROL.CONGESTION_AVOIDANCE,
                     cwnd: this.cwnd,
                     ssthresh: this.ssthresh,
                 })
@@ -116,7 +140,7 @@ class CongestionControlSimulator extends BaseSimulator {
             this.state = CONGESTION_CONTROL.SLOW_START;
 
             this.timeline.addEvent(
-                new Event(retransmitTIme, EVENT_TYPE.SLOW_START, {
+                new Event(retransmitTIme, EVENT_TYPE.TIMEOUT_CONGESTION, {
                     oldCwnd,
                     oldSsthresh,
                     newSsthresh: this.ssthresh,
@@ -168,10 +192,10 @@ class CongestionControlSimulator extends BaseSimulator {
 
         if (this.cwnd < this.ssthresh) {
             this.cwnd += sendPacketCount * TCP.MSS;
-            this.state = CONGESTION_STATE.SLOW_START;
+            this.state = CONGESTION_CONTROL.SLOW_START;
         } else {
             this.cwnd += TCP.MSS;
-            this.state = CONGESTION_STATE.CONGESTION_AVOIDANCE;
+            this.state = CONGESTION_CONTROL.CONGESTION_AVOIDANCE;
         }
 
         if (oldCwnd !== this.cwnd) {
@@ -186,6 +210,56 @@ class CongestionControlSimulator extends BaseSimulator {
                 })
             );
         }
+    }
+
+    async _executeEvent(event) {
+        switch (event.type) {
+            case EVENT_TYPE.WINDOW_SEND_START:
+                console.log(
+                    `\n[${event.time}ms] 📦 Window 전송 시작 [${event.data.state}]\n` +
+                        `          cwnd: ${event.data.cwnd}B (${event.data.cwndPackets} packets)\n` +
+                        `          ssthresh: ${event.data.ssthresh === Infinity ? '∞' : event.data.ssthresh + 'B'} (${
+                            event.data.ssthreshPackets
+                        } packets)\n` +
+                        `          → Packet#${event.data.startPacketId} ~ #${event.data.endPacketId} (${event.data.windowSize} packets)`
+                );
+                return;
+
+            case EVENT_TYPE.CWND_UPDATE:
+                console.log(
+                    `[${event.time}ms] cwnd: ${event.data.oldCwnd}B → ${event.data.newCwnd}B (${event.data.cwndPackets} packets) [${event.data.state}]`
+                );
+                return;
+
+            case EVENT_TYPE.STATE_CHANGE:
+                console.log(
+                    `[${event.time}ms] 상태 전환: ${event.data.from} → ${event.data.to}\n` +
+                        `          cwnd: ${event.data.cwnd}B, ssthresh: ${event.data.ssthresh}B`
+                );
+                return;
+
+            case EVENT_TYPE.FAST_RECOVERY:
+                console.log(
+                    `[${event.time}ms] ❤️‍🩹❤️‍🩹❤️‍🩹 Fast Recovery 진입 (3 Duplicate ACKs) ❤️‍🩹❤️‍🩹❤️‍🩹\n` +
+                        `          ssthresh: ${
+                            event.data.oldSsthresh === Infinity ? '∞' : event.data.oldSsthresh + 'B'
+                        } → ${event.data.newSsthresh}B\n` +
+                        `          cwnd: ${event.data.oldCwnd}B → ${event.data.newCwnd}B`
+                );
+                return;
+
+            case EVENT_TYPE.TIMEOUT_CONGESTION:
+                console.log(
+                    `[${event.time}ms] ⏰⏰⏰ Timeout으로 인한 혼잡 감지 ⏰⏰⏰\n` +
+                        `          ssthresh: ${
+                            event.data.oldSsthresh === Infinity ? '∞' : event.data.oldSsthresh + 'B'
+                        } → ${event.data.newSsthresh}B\n` +
+                        `          cwnd: ${event.data.oldCwnd}B → ${event.data.newCwnd}B (Slow Start 재시작)`
+                );
+                return;
+        }
+
+        await super._executeEvent(event);
     }
 }
 
