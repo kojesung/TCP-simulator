@@ -1,5 +1,6 @@
 import BaseSimulator from './BaseSimulator.js';
 import { CONGESTION_CONTROL, EVENT_TYPE, TCP } from './constants.js';
+import Event from './Event.js';
 import PacketFragments from './PacketFragments.js';
 import RandomGenerator from './RandomGenerator.js';
 
@@ -9,7 +10,7 @@ class CongestionControlSimulator extends BaseSimulator {
 
         this.cwnd = initialCwnd * TCP.MSS;
         this.ssthresh = Infinity;
-        this.state = CONGESTION_STATE.SLOW_START;
+        this.state = CONGESTION_CONTROL.SLOW_START;
 
         this.maxAckTime = 0;
     }
@@ -25,7 +26,7 @@ class CongestionControlSimulator extends BaseSimulator {
                 this.currentTime += this.rtt;
                 continue;
             }
-            const willSend = Math.min(canSendPackets, this.packets.length - sentCount);
+            const willSend = Math.min(canSendPacketCount, this.packets.length - sentCount);
 
             this.#sendPacketAsMuchAsCwnd(willSend, sentCount);
 
@@ -36,8 +37,8 @@ class CongestionControlSimulator extends BaseSimulator {
     #sendPacketAsMuchAsCwnd(sendCount, startIndex) {
         let decidedPackets = [];
         for (let i = 0; i < sendCount; i++) {
-            packet = this.packets[startIndex + i];
-            isLost = RandomGenerator.isPacketLost(this.lossRate);
+            const packet = this.packets[startIndex + i];
+            const isLost = RandomGenerator.isPacketLost(this.lossRate);
             decidedPackets.push({ packet, isLost });
         }
 
@@ -56,7 +57,7 @@ class CongestionControlSimulator extends BaseSimulator {
                 this.#planPacketLoss(decidedPackets, i, this.currentTime, packet);
                 this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_LOSS, packet));
             } else {
-                this.#planPacketSuccess(/*decidedPackets, i, this.currentTime, packet*/);
+                this.#planPacketSuccess(decidedPackets, i, this.currentTime, packet);
             }
 
             this.currentTime += 1;
@@ -72,7 +73,7 @@ class CongestionControlSimulator extends BaseSimulator {
 
             this.ssthresh = Math.max(Math.floor(this.cwnd / 2), TCP.MSS * 2); // slow start를 위한 촤소 sstresh 보장
             this.cwnd = this.ssthresh + 3 * TCP.MSS;
-            this.state = CONGESTION_STATE.FAST_RECOVERY;
+            this.state = CONGESTION_CONTROL.FAST_RECOVERY;
 
             this.timeline.addEvent(
                 new Event(fastRetransmitTime, EVENT_TYPE.FAST_RECOVERY, {
@@ -90,11 +91,12 @@ class CongestionControlSimulator extends BaseSimulator {
                 })
             );
 
-            this._createRetransmitEvents(packet, fastRetransmitTime);
+            const ackTime = this._createRetransmitEvents(packet, fastRetransmitTime);
+            this.maxAckTime = Math.max(this.maxAckTime, ackTime);
         } else if (lossType === 'TIMEOUT') {
             const retransmitTIme = sentTime + this.rtt * 2;
             const oldCwnd = this.cwnd;
-            const oldSsthresh = tihs.ssthresh;
+            const oldSsthresh = this.ssthresh;
 
             this.ssthresh = this.cwnd / 2;
             this.cwnd = TCP.MSS;
@@ -116,13 +118,36 @@ class CongestionControlSimulator extends BaseSimulator {
                 })
             );
 
-            this._createRetransmitEvents(packet, retransmitTIme);
+            const ackTime = this._createRetransmitEvents(packet, fastRetransmitTime);
+            this.maxAckTime = Math.max(this.maxAckTime, ackTime);
         }
-        this.maxAckTime = Math.max(this.maxAckTime, ackTime);
     }
+
     #planPacketSuccess(windowPackets, indexInWindow, sentTime, packet) {
-        // sstresh 넘었으면 -> congestion avoidance
-        // sstresh 안 넘었으면 -> slow start
+        let firstLossInWindow = null;
+        for (let i = 0; i < indexInWindow; i++) {
+            if (windowPackets[i].isLost) {
+                firstLossInWindow = windowPackets[i].packet;
+                break;
+            }
+        }
+
+        const arriveTime = sentTime + this.rtt / 2;
+        this.timeline.addEvent(new Event(arriveTime, EVENT_TYPE.PACKET_ARRIVE, { packet }));
+
+        const ackTime = arriveTime + this.rtt / 2;
+        if (firstLossInWindow) {
+            this.timeline.addEvent(
+                new Event(ackTime, EVENT_TYPE.DUPLICATE_ACK, {
+                    ack: firstLossInWindow.startSeq,
+                    packet: firstLossInWindow,
+                })
+            );
+        } else {
+            this.timeline.addEvent(new Event(ackTime, EVENT_TYPE.DATA_ACK_ARRIVE, { ack: packet.endSeq + 1 }));
+        }
+
+        this.maxAckTime = Math.max(this.maxAckTime, ackTime);
     }
 }
 

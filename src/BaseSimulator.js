@@ -78,6 +78,7 @@ class BaseSimulator {
                 ack: packet.endSeq + 1,
             })
         );
+        return ackTime;
     }
 
     _fourWayHandshake() {
