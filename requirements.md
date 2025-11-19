@@ -34,10 +34,10 @@
 
 ### CONGESTION_CONTROL 모드
 
--   [ ] cwnd 관리 (Slow Start)
--   [ ] Congestion Avoidance
+-   [x] cwnd 관리 (Slow Start)
+-   [x] Congestion Avoidance
 -   [ ] Fast Recovery
--   [ ] ssthresh 계산
+-   [x] ssthresh 계산
 -   [ ] CONGESTION_CONTROL 모드 통합 테스트
 
 ### 시뮬레이션 속도

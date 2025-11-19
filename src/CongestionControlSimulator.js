@@ -58,6 +58,7 @@ class CongestionControlSimulator extends BaseSimulator {
                 this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_LOSS, packet));
             } else {
                 this.#planPacketSuccess(decidedPackets, i, this.currentTime, packet);
+                this.#updateCwndOnSuccess(sendCount);
             }
 
             this.currentTime += 1;
@@ -148,6 +149,31 @@ class CongestionControlSimulator extends BaseSimulator {
         }
 
         this.maxAckTime = Math.max(this.maxAckTime, ackTime);
+    }
+
+    #updateCwndOnSuccess(sendPacketCount) {
+        const oldCwnd = this.cwnd;
+
+        if (this.cwnd < this.ssthresh) {
+            this.cwnd += sendPacketCount * TCP.MSS;
+            this.state = CONGESTION_STATE.SLOW_START;
+        } else {
+            this.cwnd += TCP.MSS;
+            this.state = CONGESTION_STATE.CONGESTION_AVOIDANCE;
+        }
+
+        if (oldCwnd !== this.cwnd) {
+            this.timeline.addEvent(
+                new Event(this.currentTime, EVENT_TYPE.CWND_UPDATE, {
+                    oldCwnd,
+                    newCwnd: this.cwnd,
+                    cwndPackets: Math.floor(this.cwnd / TCP.MSS),
+                    ssthresh: this.ssthresh,
+                    ssthreshPackets: this.ssthresh === Infinity ? '∞' : Math.floor(this.ssthresh / TCP.MSS),
+                    state: this.state,
+                })
+            );
+        }
     }
 }
 
