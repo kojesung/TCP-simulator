@@ -93,6 +93,18 @@ class CongestionControlSimulator extends BaseSimulator {
             );
 
             const ackTime = this._createRetransmitEvents(packet, fastRetransmitTime);
+
+            this.state = CONGESTION_CONTROL.CONGESTION_AVOIDANCE;
+            this.cwnd = this.ssthresh;
+            this.timeline.addEvent(
+                new Event(ackTime, EVENT_TYPE.STATE_CHANGE, {
+                    from: CONGESTION_STATE.FAST_RECOVERY,
+                    to: CONGESTION_STATE.CONGESTION_AVOIDANCE,
+                    cwnd: this.cwnd,
+                    ssthresh: this.ssthresh,
+                })
+            );
+
             this.maxAckTime = Math.max(this.maxAckTime, ackTime);
         } else if (lossType === 'TIMEOUT') {
             const retransmitTIme = sentTime + this.rtt * 2;
@@ -119,7 +131,7 @@ class CongestionControlSimulator extends BaseSimulator {
                 })
             );
 
-            const ackTime = this._createRetransmitEvents(packet, fastRetransmitTime);
+            const ackTime = this._createRetransmitEvents(packet, retransmitTIme);
             this.maxAckTime = Math.max(this.maxAckTime, ackTime);
         }
     }

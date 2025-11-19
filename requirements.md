@@ -36,7 +36,7 @@
 
 -   [x] cwnd 관리 (Slow Start)
 -   [x] Congestion Avoidance
--   [ ] Fast Recovery
+-   [x] Fast Recovery
 -   [x] ssthresh 계산
 -   [ ] CONGESTION_CONTROL 모드 통합 테스트
 
