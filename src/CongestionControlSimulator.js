@@ -1,5 +1,5 @@
 import BaseSimulator from './BaseSimulator.js';
-import { EVENT_TYPE, TCP } from './constants.js';
+import { CONGESTION_CONTROL, EVENT_TYPE, TCP } from './constants.js';
 import PacketFragments from './PacketFragments.js';
 import RandomGenerator from './RandomGenerator.js';
 
@@ -53,7 +53,7 @@ class CongestionControlSimulator extends BaseSimulator {
             );
 
             if (isLost) {
-                this.#planPacketLoss(/*decidedPackets, i, this.currentTime, packet*/);
+                this.#planPacketLoss(decidedPackets, i, this.currentTime, packet);
                 this.timeline.addEvent(new Event(this.currentTime, EVENT_TYPE.PACKET_LOSS, packet));
             } else {
                 this.#planPacketSuccess(/*decidedPackets, i, this.currentTime, packet*/);
@@ -63,8 +63,67 @@ class CongestionControlSimulator extends BaseSimulator {
         }
     }
 
-    #planPacketLoss() {}
-    #planPacketSuccess() {}
+    #planPacketLoss(windowPackets, indexInWindow, sentTime, packet) {
+        const lossType = this._detectLossType(windowPackets, indexInWindow);
+        if (lossType === 'FAST_RETRANSMIT') {
+            const fastRetransmitTime = sentTime + this.rtt + 3;
+            const oldCwnd = this.cwnd;
+            const oldSsthresh = this.ssthresh;
+
+            this.ssthresh = Math.max(Math.floor(this.cwnd / 2), TCP.MSS * 2); // slow start를 위한 촤소 sstresh 보장
+            this.cwnd = this.ssthresh + 3 * TCP.MSS;
+            this.state = CONGESTION_STATE.FAST_RECOVERY;
+
+            this.timeline.addEvent(
+                new Event(fastRetransmitTime, EVENT_TYPE.FAST_RECOVERY, {
+                    oldCwnd,
+                    oldSsthresh,
+                    newSsthresh: this.ssthresh,
+                    newCwnd: this.cwnd,
+                    packet,
+                })
+            );
+
+            this.timeline.addEvent(
+                new Event(fastRetransmitTime, EVENT_TYPE.FAST_RETRANSMIT, {
+                    packet,
+                })
+            );
+
+            this._createRetransmitEvents(packet, fastRetransmitTime);
+        } else if (lossType === 'TIMEOUT') {
+            const retransmitTIme = sentTime + this.rtt * 2;
+            const oldCwnd = this.cwnd;
+            const oldSsthresh = tihs.ssthresh;
+
+            this.ssthresh = this.cwnd / 2;
+            this.cwnd = TCP.MSS;
+            this.state = CONGESTION_CONTROL.SLOW_START;
+
+            this.timeline.addEvent(
+                new Event(retransmitTIme, EVENT_TYPE.SLOW_START, {
+                    oldCwnd,
+                    oldSsthresh,
+                    newSsthresh: this.ssthresh,
+                    newCwnd: this.cwnd,
+                    packet,
+                })
+            );
+
+            this.timeline.addEvent(
+                new Event(retransmitTIme, EVENT_TYPE.RETRANSMIT, {
+                    packet,
+                })
+            );
+
+            this._createRetransmitEvents(packet, retransmitTIme);
+        }
+        this.maxAckTime = Math.max(this.maxAckTime, ackTime);
+    }
+    #planPacketSuccess(windowPackets, indexInWindow, sentTime, packet) {
+        // sstresh 넘었으면 -> congestion avoidance
+        // sstresh 안 넘었으면 -> slow start
+    }
 }
 
 export default CongestionControlSimulator;
