@@ -30,7 +30,7 @@
 -   [x] RWND가 부족할 때 1byte씩 보내는 Probe
 -   [x] Fast Retransmit (3 dup ACKs)
 -   [x] 처리 속도에 따른 rwnd 변화
--   [ ] FLOW_CONTROL 모드 통합 테스트
+-   [x] FLOW_CONTROL 모드 통합 테스트
 
 ### CONGESTION_CONTROL 모드
 
