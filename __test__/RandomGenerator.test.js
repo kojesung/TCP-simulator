@@ -19,7 +19,6 @@ describe('RandomGenerator', () => {
             const results = Array.from({ length: 1000 }, () => RandomGenerator.isPacketLost(50));
 
             const trueCount = results.filter((result) => result === true).length;
-            console.log(trueCount);
             expect(trueCount).toBeGreaterThan(400);
             expect(trueCount).toBeLessThan(600);
         });
