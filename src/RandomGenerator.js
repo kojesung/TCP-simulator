@@ -1,6 +1,6 @@
 class RandomGenerator {
     static isPacketLost(lossRate) {
-        return Math.floor(Math.random() * 101) < lossRate;
+        return Math.floor(Math.random() * 100) < lossRate;
     }
 }
 
