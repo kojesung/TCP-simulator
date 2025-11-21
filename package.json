@@ -1,10 +1,43 @@
 {
     "name": "tcp-simulator",
     "version": "1.0.0",
+    "description": "Educational TCP Protocol Simulator with Flow Control and Congestion Control",
+    "main": "src/index.js",
     "type": "module",
+    "private": true,
     "scripts": {
         "start": "node src/index.js",
-        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+        "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+        "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
+    },
+    "keywords": [
+        "tcp",
+        "simulator",
+        "networking",
+        "flow-control",
+        "congestion-control",
+        "education",
+        "computer-networks",
+        "tcp-ip",
+        "educational"
+    ],
+    "author": "kojesung<js95112345@gmail.com>",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/kojesung/tcp-simulator.git"
+    },
+    "bugs": {
+        "url": "https://github.com/kojesung/tcp-simulator/issues"
+    },
+    "homepage": "https://github.com/kojesung/tcp-simulator#readme",
+    "engines": {
+        "node": ">=20.17.0",
+        "npm": ">=10.8.2"
+    },
+    "dependencies": {
+        "@woowacourse/mission-utils": "^2.2.0"
     },
     "devDependencies": {
         "@babel/core": "^7.25.8",
@@ -13,7 +46,12 @@
         "babel-jest": "^30.1.2",
         "jest": "^30.2.0"
     },
-    "dependencies": {
-        "@woowacourse/mission-utils": "^2.2.0"
+    "jest": {
+        "testEnvironment": "node",
+        "transform": {},
+        "collectCoverageFrom": [
+            "src/**/*.js",
+            "!src/index.js"
+        ]
     }
 }
