@@ -103,7 +103,7 @@ RTT를 입력해주세요 (ms): 100
 
 ```bash
 # 저장소 클론
-git clone https://github.com/yourusername/tcp-simulator.git
+git clone https://github.com/kojesung/tcp-simulator.git
 cd tcp-simulator
 
 # 의존성 설치
